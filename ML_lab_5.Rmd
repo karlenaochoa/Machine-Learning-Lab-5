@@ -34,14 +34,29 @@ Run the code chunk below to load the packages and the processed `ames` data that
 library(tidyverse)
 library(tidymodels)
 library(AmesHousing)
+library(skimr)
 #Make the processed ames data
 ames <- make_ames()
+
+ames_short <- ames %>% 
+  select(c(Neighborhood, Year_Sold, Longitude, Latitude, Gr_Liv_Area, Bedroom_AbvGr, Full_Bath, Half_Bath, Lot_Area, Year_Built, Exter_Qual, Sale_Price, Fence, Garage_Area))
 ```
 
 ### 2. Get to know the data
 Briefly explore the `ames` data to get a (small) understanding of the data set. How you do this is entirely up to you. You could use look at the correlations between the features and `Sale_Price`, use the `{skimr}` package to get an initial look at the data, make some quick plots using `{ggplot2}`, or use your usual routine for initial data exploration. Try to do this in about 15 minutes.
 
 ```{r}
+skim(ames_short)
+
+
+plot_info <- ames_short %>%                   # Keep only numeric columns
+  select_if(is.numeric) %>%
+  gather(key = "variable", value = "value", -Sale_Price)
+
+ggplot(plot_info, aes(x = value, y = Sale_Price)) + 
+  geom_point() + # Plot the values
+  facet_wrap(~ variable, scales = "free")
+
 ```
 
 
@@ -50,16 +65,34 @@ Split the `ames` data from above into a training and test set (use seed `210`).
 Use one of the methods we have learned to resample the traning set. It is up to you if you want/need to use stratified resampling.
 ```{r}
 set.seed(210)
+ames_split <- initial_split(ames_short) 
+
+ames_train <- training(ames_split)
+ames_test  <- testing(ames_split)
+
+ames_cv <- vfold_cv(ames_train)
 ```
 
 ### 4. Preprocess
 Create a `recipe` to prepare your data for a *K*NN model. 
 ```{r}
- 
+knn_reg_rec <- 
+  recipe(
+    Sale_Price ~ ., 
+    data = ames_train
+  ) %>%
+  step_dummy(Neighborhood, Exter_Qual, Fence) %>%
+  step_normalize(all_numeric(), -all_outcomes()) %>% 
+  step_nzv(all_numeric())
 ```
 ### 5. Set a *K*NN model
 Create a `{parsnip}` model for a *K*NN model and allow for the `neighbors` and `weight_func` hyperparameters to be tuned.
 ```{r}
+knn_reg_mod <- nearest_neighbor() %>%
+  set_engine("kknn") %>% 
+  set_mode("regression") 
+
+translate(knn_reg_mod)
 ```
 ### 6. Create non-regular grid
 Create a non-regular, space-filling design grid using `grid_max_entropy` and 50 parameter values.
