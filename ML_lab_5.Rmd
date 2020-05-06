@@ -1,0 +1,87 @@
+
+---
+title: "Lab 5"
+subtitle: "k-nearest neighbor"
+date: "Assigned 5/6/20, Due 5/13/19"
+output:
+  html_document: 
+    toc: true
+    toc_float: true
+    theme: "journal"
+    css: "website-custom.css"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE,
+                      message = FALSE,
+                      warning = FALSE)
+```
+
+The goal of this lab is to apply and tune *K*-nearest neighbor models, and explore non-regular grids.
+
+For this lab, we are going to use the `Ames` housing data - the `{iris}` of machine learning data sets. The `Ames` data describes "the sale of individual residential property in Ames, Iowa from 2006 to 2010" ([De Cock, 2011](http://jse.amstat.org/v19n3/decock.pdf)). The raw data set "contains 2930 observations and a large number of explanatory variables (23 nominal, 23 ordinal, 14 discrete, and 20 continuous) involved in assessing home values." 
+
+The `Ames` raw data comes from the `{AmesHousing}` package. Explore the variables with `?ames_raw`. We will apply the `make_ames()` function to use the processed version of the data, where all factors are unordered, column names are Snake_Case, some columns were removed, some missing values were recoded, many factor levels were changed to more understandable, and longitude and latitude are included. See `?make_ames` for more infomormation.
+
+Note that the goal of this lab is **not** to make the most accurate predictions, so please do not get too bogged down into the data features. Some useful features are: **Neighborhood**, **Year_Sold**, **Longitude**, **Latitude**, **Gr_Liv_Area**, **Bedroom_AbvGr**, **Full_Bath**, **Half_Bath**.
+
+We will be predicting **Sale_Price.**
+
+### 1. Data
+Run the code chunk below to load the packages and the processed `ames` data that you will be using. Note that you may need to first install `{AmesHousing}` if you have never done so.
+
+```{r, echo=TRUE}
+library(tidyverse)
+library(tidymodels)
+library(AmesHousing)
+#Make the processed ames data
+ames <- make_ames()
+```
+
+### 2. Get to know the data
+Briefly explore the `ames` data to get a (small) understanding of the data set. How you do this is entirely up to you. You could use look at the correlations between the features and `Sale_Price`, use the `{skimr}` package to get an initial look at the data, make some quick plots using `{ggplot2}`, or use your usual routine for initial data exploration. Try to do this in about 15 minutes.
+
+```{r}
+```
+
+
+### 3. Split and Resample
+Split the `ames` data from above into a training and test set (use seed `210`). 
+Use one of the methods we have learned to resample the traning set. It is up to you if you want/need to use stratified resampling.
+```{r}
+set.seed(210)
+```
+
+### 4. Preprocess
+Create a `recipe` to prepare your data for a *K*NN model. 
+```{r}
+ 
+```
+### 5. Set a *K*NN model
+Create a `{parsnip}` model for a *K*NN model and allow for the `neighbors` and `weight_func` hyperparameters to be tuned.
+```{r}
+```
+### 6. Create non-regular grid
+Create a non-regular, space-filling design grid using `grid_max_entropy` and 50 parameter values.
+Tune the range of `neighbors` hyperparameter for `c(1:20)` and any 5 levels of the `weight_func` hyperparameter.
+Produce a `ggplot` to show a graphical representation of your non-regular grid.
+```{r}
+```
+### 7. Fit your tuned models
+Fit your tuned *K*NN model to your `resamples`, using your specified `recipe` and non-regular `grid`.
+Show the top 5 tuned parameter models with the best `rmse` estimates. 
+```{r}
+```
+### 8. Recreate `autoplot()`
+Run `autoplot()` on your fitted tuned model object. Then reproduce that `autoplot` figure using `ggplot2`.
+```{r}
+```
+### 9. Final fit
+Conduct your final fit by using:
+* `select_best` to select your best tuned model
+* `finalize_model` to finalize your model using your best tuned model
+* `finalize_recipe` to finalize your recipe using your best tuned model
+* `last_fit` to run your last fit with your `finalized_model` and `finalized_recipe`on your initial data split
+* `collect_metrics` from your final results
+```{r}
+```
