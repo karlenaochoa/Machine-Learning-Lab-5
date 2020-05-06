@@ -35,6 +35,8 @@ library(tidyverse)
 library(tidymodels)
 library(AmesHousing)
 library(skimr)
+library(doParallel)
+library(tictoc)
 #Make the processed ames data
 ames <- make_ames()
 
@@ -85,6 +87,7 @@ knn_reg_rec <-
   step_normalize(all_numeric(), -all_outcomes()) %>% 
   step_nzv(all_numeric())
 ```
+
 ### 5. Set a *K*NN model
 Create a `{parsnip}` model for a *K*NN model and allow for the `neighbors` and `weight_func` hyperparameters to be tuned.
 ```{r}
@@ -93,22 +96,82 @@ knn_reg_mod <- nearest_neighbor() %>%
   set_mode("regression") 
 
 translate(knn_reg_mod)
+
+knn_reg_mod <- knn_reg_mod %>% 
+  set_args(neighbors = tune(),
+                    weight_func = tune(),
+                    dist_power = tune())
 ```
+
 ### 6. Create non-regular grid
 Create a non-regular, space-filling design grid using `grid_max_entropy` and 50 parameter values.
 Tune the range of `neighbors` hyperparameter for `c(1:20)` and any 5 levels of the `weight_func` hyperparameter.
 Produce a `ggplot` to show a graphical representation of your non-regular grid.
 ```{r}
+
+knn_params <- parameters(neighbors(range = c(1,20)), weight_func(values = values_weight_func[1:5]), dist_power())
+
+knn_entr <- grid_max_entropy(knn_params, size = 50) # 50 rows from samples of all 3 of things
+
+
+knn_entr %>% 
+  ggplot(aes(neighbors, dist_power)) +
+  geom_point(aes(color = weight_func)) 
+
+
 ```
+
 ### 7. Fit your tuned models
 Fit your tuned *K*NN model to your `resamples`, using your specified `recipe` and non-regular `grid`.
 Show the top 5 tuned parameter models with the best `rmse` estimates. 
 ```{r}
+
+tic()
+cl <- makeCluster(4)
+
+registerDoParallel(cl)
+
+knn_reg_res <- tune::tune_grid(
+  knn_reg_mod,
+  preprocessor = knn_reg_rec,
+  grid = knn_entr,
+  resamples = ames_cv,
+  control = tune::control_resamples(verbose = TRUE,
+                                    save_pred = TRUE))
+
+stopCluster(cl)
+toc()
+
+knn_reg_res %>% 
+  show_best(metric = "rmse", n = 5)
+
 ```
+
 ### 8. Recreate `autoplot()`
 Run `autoplot()` on your fitted tuned model object. Then reproduce that `autoplot` figure using `ggplot2`.
 ```{r}
+
+knn_reg_res %>% 
+  autoplot() +
+  geom_line()
+
+## Let's make a regular grid by hand
+
+#RMSE on y axis, neigh or dist_power on x 
+
+knn_reg_res %>% 
+  ggplot(aes(neighbors, rmse)) +
+  geom_point() +
+  scale_x_continuous(breaks = c(1:20))
+
+knn_reg_res %>% 
+  ggplot(aes(dist_power(), rmse, color = weight_func)) +
+  geom_point() +
+  scale_x_continuous(breaks = c(1:20))
+
 ```
+
+
 ### 9. Final fit
 Conduct your final fit by using:
 * `select_best` to select your best tuned model
@@ -118,3 +181,8 @@ Conduct your final fit by using:
 * `collect_metrics` from your final results
 ```{r}
 ```
+
+
+
+
+
