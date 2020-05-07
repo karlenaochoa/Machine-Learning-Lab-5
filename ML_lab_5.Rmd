@@ -225,8 +225,6 @@ stopCluster(cl)
 knn_reg_test_results %>% 
   collect_metrics()
 
-collect_metrics(knn_reg_test_results)
-  
 ```
 
 
