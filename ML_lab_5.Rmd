@@ -125,9 +125,10 @@ knn_entr %>%
 Fit your tuned *K*NN model to your `resamples`, using your specified `recipe` and non-regular `grid`.
 Show the top 5 tuned parameter models with the best `rmse` estimates. 
 ```{r}
+parallel::detectCores()
 
 tic()
-cl <- makeCluster(4)
+cl <- makeCluster(8)
 
 registerDoParallel(cl)
 
@@ -159,15 +160,32 @@ knn_reg_res %>%
 
 #RMSE on y axis, neigh or dist_power on x 
 
-knn_reg_res %>% 
-  ggplot(aes(neighbors, rmse)) +
-  geom_point() +
-  scale_x_continuous(breaks = c(1:20))
 
-knn_reg_res %>% 
-  ggplot(aes(dist_power(), rmse, color = weight_func)) +
+df <- knn_reg_res %>% 
+  select(`.metrics`) %>% 
+  unnest(cols = `.metrics`) %>% 
+  group_by(neighbors, weight_func, dist_power, `.metric`) %>%
+  summarise(means = mean(`.estimate`)) %>%  
+  pivot_longer(
+    cols = c(neighbors, dist_power),
+    names_to = "tunes",
+    values_to = "Parameter Value") %>% 
+  filter(`.metric` == "rmse")
+
+
+head(df)
+
+ df %>% 
+  filter(tunes == "neighbors") %>% 
+  ggplot(aes(`Parameter Value`, means, color = weight_func)) +
   geom_point() +
-  scale_x_continuous(breaks = c(1:20))
+  labs(title = "Neighbors")
+ 
+  df %>% 
+  filter(tunes == "dist_power") %>% 
+  ggplot(aes(`Parameter Value`, means, color = weight_func)) +
+  geom_point()+
+  labs(title = "Distance Power")
 
 ```
 
@@ -180,6 +198,35 @@ Conduct your final fit by using:
 * `last_fit` to run your last fit with your `finalized_model` and `finalized_recipe`on your initial data split
 * `collect_metrics` from your final results
 ```{r}
+
+# Select best tuning parameters
+knn_reg_best <- knn_reg_res %>%
+  select_best(metric = "rmse")
+
+# Finalize your model using the best tuning parameters
+knn_reg_mod_final <- knn_reg_mod %>%
+  finalize_model(knn_reg_best) 
+
+# Finalize your recipe using the best turning parameters
+knn_reg_rec_final <- knn_reg_rec %>% 
+  finalize_recipe(knn_reg_best)
+
+# Run your last fit on your initial data split
+cl <- makeCluster(8)
+registerDoParallel(cl)
+
+knn_reg_test_results <- last_fit(
+  knn_reg_mod_final, 
+  preprocessor = knn_reg_rec_final, 
+  split = ames_split)
+stopCluster(cl)
+
+#Collect metrics
+knn_reg_test_results %>% 
+  collect_metrics()
+
+collect_metrics(knn_reg_test_results)
+  
 ```
 
 
