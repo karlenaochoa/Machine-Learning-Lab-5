@@ -37,6 +37,7 @@ library(AmesHousing)
 library(skimr)
 library(doParallel)
 library(tictoc)
+library(kknn)
 #Make the processed ames data
 ames <- make_ames()
 
@@ -220,6 +221,9 @@ knn_reg_test_results <- last_fit(
   preprocessor = knn_reg_rec_final, 
   split = ames_split)
 stopCluster(cl)
+
+knn_reg_test_results %>% 
+  unnest
 
 #Collect metrics
 knn_reg_test_results %>% 
