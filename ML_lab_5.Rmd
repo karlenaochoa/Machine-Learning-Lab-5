@@ -199,6 +199,7 @@ Conduct your final fit by using:
 * `last_fit` to run your last fit with your `finalized_model` and `finalized_recipe`on your initial data split
 * `collect_metrics` from your final results
 ```{r}
+foreach::registerDoSEQ()
 
 # Select best tuning parameters
 knn_reg_best <- knn_reg_res %>%
@@ -213,17 +214,12 @@ knn_reg_rec_final <- knn_reg_rec %>%
   finalize_recipe(knn_reg_best)
 
 # Run your last fit on your initial data split
-cl <- makeCluster(8)
-registerDoParallel(cl)
 
 knn_reg_test_results <- last_fit(
   knn_reg_mod_final, 
   preprocessor = knn_reg_rec_final, 
   split = ames_split)
-stopCluster(cl)
 
-knn_reg_test_results %>% 
-  unnest
 
 #Collect metrics
 knn_reg_test_results %>% 
